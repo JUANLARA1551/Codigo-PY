@@ -1,0 +1,72 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import solve_ivp
+
+# Parámetros
+const = -7.144e-4
+ini_val = 1.5
+ti, tf = 0, 3600
+paso = 200
+
+# EDO
+def modelo(t, u):
+    return const / (3*np.sqrt(u) - u**1.5)
+
+# Solución exacta
+t_ref = np.linspace(ti, tf, 500)
+sol_ref = solve_ivp(modelo, [ti, tf], [ini_val], t_eval=t_ref)
+u_ref = sol_ref.y[0]
+
+# Métodos numéricos genéricos
+def euler_basico(fun, ti, ui, h, tf):
+    t, u = [ti], [ui]
+    while t[-1] < tf:
+        u.append(u[-1] + h * fun(t[-1], u[-1]))
+        t.append(t[-1] + h)
+    return np.array(t), np.array(u)
+
+def euler_mod(fun, ti, ui, h, tf):
+    t, u = [ti], [ui]
+    while t[-1] < tf:
+        k1 = fun(t[-1], u[-1])
+        k2 = fun(t[-1] + h, u[-1] + h*k1)
+        u.append(u[-1] + (h/2)*(k1 + k2))
+        t.append(t[-1] + h)
+    return np.array(t), np.array(u)
+
+def rk4(fun, ti, ui, h, tf):
+    t, u = [ti], [ui]
+    while t[-1] < tf:
+        k1 = fun(t[-1], u[-1])
+        k2 = fun(t[-1] + h/2, u[-1] + h*k1/2)
+        k3 = fun(t[-1] + h/2, u[-1] + h*k2/2)
+        k4 = fun(t[-1] + h, u[-1] + h*k3)
+        u.append(u[-1] + (h/6)*(k1 + 2*k2 + 2*k3 + k4))
+        t.append(t[-1] + h)
+    return np.array(t), np.array(u)
+
+# Soluciones numéricas
+t_eu, u_eu = euler_basico(modelo, ti, ini_val, paso, tf)
+t_em, u_em = euler_mod(modelo, ti, ini_val, paso, tf)
+t_rk, u_rk = rk4(modelo, ti, ini_val, paso, tf)
+
+# Graficar
+metodos = [
+    ("Euler", t_eu, u_eu, 'bo--'),
+    ("Euler Mejorado", t_em, u_em, 'gs--'),
+    ("Runge-Kutta 4", t_rk, u_rk, 'md--')
+]
+
+plt.figure(figsize=(8, 10))
+for i, (titulo, tx, ux, estilo) in enumerate(metodos, start=1):
+    plt.subplot(3, 1, i)
+    plt.plot(t_ref, u_ref, 'r-', label='Exacta', linewidth=2)
+    plt.plot(tx, ux, estilo, label=titulo)
+    plt.xlabel('Tiempo (s)')
+    plt.ylabel('Altura (m)')
+    plt.title(titulo)
+    plt.legend()
+    plt.grid(True)
+
+plt.tight_layout()
+plt.show()
